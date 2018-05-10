@@ -1,0 +1,102 @@
+#!/usr/bin/python3
+import os;
+import sys;
+
+"""
+RSyncCStation Version 2!
+
+Rationale:
+the original rscs was quite robust, and was fairly easy to modify. That said, being written in BASH it carried over the limitations of BASH, and thus would only really allow for one directory to sync per instance of the file.
+
+So how does it work?
+
+To use rscs2, simply put directories in the array below. You'll note each element in the array is a tuple, with three elements. Two are strings, one is an array. The first string is the target. This should be a simple pneumonic you can type quickly and remember easily. It's the folder identifier for that path. The second argument is the path (should be a full path for compatibility and stability sake). The third argument is an array of directory-specific excluded patterns. See below for examples."""
+
+syncdirs = [
+  ("rscs1", "/home/joe/SyncMe", []),
+  ("lmms", "/home/joe/lmms", ["*.ogg", "*.wav", "*.mp3"])]; # Excludes exported audio
+
+#server parameters
+server = "192.168.0.33"
+port = "22"
+server_remote = "wykkid.awesome.dnsna.me"
+port_remote = "2000"
+username = "joe"
+
+#general parameters
+excludes_file = "~/.rsexcludes.regex"
+
+#and now to program code. This is the section that should (more or less) be a black box.
+argc = len(sys.argv)
+mode = 0
+target = "all"
+if(argc > 1):
+  argv_previous = ""
+  passed_first_argument = False;
+  for argument in sys.argv:
+    if(passed_first_argument == False):
+      passed_first_argument = True;
+      continue
+    elif argument == "-r":
+      mode += 1
+    elif argument == "-s" or argument == "-p" or argument == "-u":
+      argv_previous = argument
+    elif(argv_previous == "-s"):
+      server = argument
+      server_remote = argument
+    elif(argv_previous == "-p"):
+      port = argument
+      port_remote = argument
+    elif(argv_previous == "-u"):
+      username = argument
+    elif(argument == "-h" or argument == "--help"):
+      print("rscs [options] [target]")
+      print("Syncs a bunch of directories, or a single directory as determined by <target>.")
+      print()
+      print("Options: ")
+      print("     Remote server/port mode\r-r")
+      print("     Server is next argument (so -s host.or.ip)\r-s")
+      print("     Port is next argument (so -p 22 or similar)\r-p")
+      print("     Username is next argument (so -u joe or similar\r-u")
+      print()
+      print("Targets: (default is all)")
+      for ptuple in syncdirs:
+        print(ptuple[0])
+      sys.exit(0)
+    else:
+      target = argument
+if(mode == 1):
+  server = server_remote;
+  port = port_remote;
+
+command = "rsync"
+command_arguments = "-avucr --info=progress2"
+command_arguments += " --exclude-from " + excludes_file
+command_arguments += " -e \"ssh -p " + port + " -l " + username + "\""
+
+remote_template = "\"" + username + "@" + server + ":"
+for path in syncdirs:
+  if(path[0] == target or target == "all"):
+    excludes = ""
+    source_path = path[1];
+    dest_path = ""
+    splitpath = path[1].split("/");
+    splitpath.pop(len(splitpath)-1);
+    for excluded_pattern in path[2]:
+      excludes += " --exclude \"" + excluded_pattern + "\"";
+    for step in splitpath:
+      dest_path += step + "/";
+    source_formatted = remote_template + source_path + "\"";
+    dest_formatted = dest_path;
+    sendcommand = command + " " + command_arguments + excludes + " " + source_formatted + " " + dest_formatted
+    #print(sendcommand);
+    if(os.system(sendcommand) != 0):
+       print("An error occurred in the rsync command.")
+       break;
+    source_formatted = source_path;
+    dest_formatted = remote_template + dest_path + "\"";
+    receivecommand = command + " " + command_arguments + excludes + " " + source_formatted + " " + dest_formatted;
+    #print(receivecommand);
+    if(os.system(receivecommand) != 0):
+       print("An error occurred in the rsync command.")
+       break;
