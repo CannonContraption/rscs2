@@ -6,11 +6,19 @@ import sys;
 RSyncCStation Version 2!
 
 Rationale:
-the original rscs was quite robust, and was fairly easy to modify. That said, being written in BASH it carried over the limitations of BASH, and thus would only really allow for one directory to sync per instance of the file.
+the original rscs was quite robust, and was fairly easy to modify. That said,
+being written in BASH it carried over the limitations of BASH, and thus would
+only really allow for one directory to sync per instance of the file.
 
 So how does it work?
 
-To use rscs2, simply put directories in the array below. You'll note each element in the array is a tuple, with three elements. Two are strings, one is an array. The first string is the target. This should be a simple pneumonic you can type quickly and remember easily. It's the folder identifier for that path. The second argument is the path (should be a full path for compatibility and stability sake). The third argument is an array of directory-specific excluded patterns. See below for examples."""
+To use rscs2, simply put directories in the array below. You'll note each
+element in the array is a tuple, with three elements. Two are strings, one is an
+array. The first string is the target. This should be a simple pneumonic you can
+type quickly and remember easily. It's the folder identifier for that path. The
+second argument is the path (should be a full path for compatibility and 
+stability sake). The third argument is an array of directory-specific excluded
+patterns. See below for examples."""
 
 syncdirs = [
   ("rscs1", "/home/joe/SyncMe", []),
@@ -29,7 +37,7 @@ excludes_file = "~/.rsexcludes.regex"
 #and now to program code. This is the section that should (more or less) be a black box.
 argc = len(sys.argv)
 mode = 0
-target = "all"
+target = []
 if(argc > 1):
   argv_previous = ""
   passed_first_argument = False;
@@ -64,10 +72,13 @@ if(argc > 1):
         print(ptuple[0])
       sys.exit(0)
     else:
-      target = argument
+      target.append(argument);
 if(mode == 1):
   server = server_remote;
   port = port_remote;
+
+if(target == []):
+    target = ["all"];
 
 command = "rsync"
 command_arguments = "-avucr --info=progress2"
@@ -76,7 +87,8 @@ command_arguments += " -e \"ssh -p " + port + " -l " + username + "\""
 
 remote_template = "\"" + username + "@" + server + ":"
 for path in syncdirs:
-  if(path[0] == target or target == "all"):
+  if(path[0] in target or "all" in target):
+    print("\033[0;33m"+path[0]+"\033[m");
     excludes = ""
     source_path = path[1];
     dest_path = ""
@@ -86,17 +98,17 @@ for path in syncdirs:
       excludes += " --exclude \"" + excluded_pattern + "\"";
     for step in splitpath:
       dest_path += step + "/";
-    source_formatted = remote_template + source_path + "\"";
-    dest_formatted = dest_path;
-    sendcommand = command + " " + command_arguments + excludes + " " + source_formatted + " " + dest_formatted
-    #print(sendcommand);
+      source_formatted = remote_template + source_path + "\"";
+      dest_formatted = dest_path;
+      sendcommand = command + " " + command_arguments + excludes + " " + source_formatted + " " + dest_formatted
+      #print(sendcommand);
     if(os.system(sendcommand) != 0):
-       print("An error occurred in the rsync command.")
-       break;
+      print("An error occurred in the rsync command.")
+      break;
     source_formatted = source_path;
     dest_formatted = remote_template + dest_path + "\"";
     receivecommand = command + " " + command_arguments + excludes + " " + source_formatted + " " + dest_formatted;
     #print(receivecommand);
     if(os.system(receivecommand) != 0):
-       print("An error occurred in the rsync command.")
-       break;
+      print("An error occurred in the rsync command.")
+      break;
