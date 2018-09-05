@@ -1,8 +1,16 @@
 # RSyncCStation Version 2
 ## Introduction
-Built to sync folders. See my older repository for the version 1 and real rationale.
+Built to sync folders. This script is basically a wrapper around RSync in order to allow for quick syncing of common files. Sort of a replacement for dropbox or similar.
 ## New in version 2
 The script uses tuples to define directory and label structures, and allows for syncing specific folders at a time, each with their own specific exclude patterns. There's also the option to sync all the folders at once, starting at the first in the tuple list all the way to the last in order. Also allows for username specification in the command line and a looser, less strict argument ordering structure.
+## New as of August 2018
+(commmitted in Sep.)
+
+rscs2 now allows for multiple targets to be specified inline for one command. For instance:
+
+    rscs dotfiles work keepass
+
+would sync the dotfiles work and keepass targets without syncing everything. This means less instances of the command running wild.
 ## From the comments in the file...
 RSyncCStation Version 2!
 
