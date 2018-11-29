@@ -57,14 +57,16 @@ where targetname is a single word, the path to the target is a valid path on the
 
 # Example
 ## Command
-rscs2 -r dotfiles school work
+
+    rscs2 -r dotfiles school work
 
 ## Program Configuration
 
 	syncdirs = [
 	  ("dotfiles", "/home/joe/doc/dotfiles", []),
 	  ("school", "/home/joe/doc/school", ["*.class", "*.o", "*.out"]), #Excludes compiled source
-	  ("work", "/home/joe/doc/work", [])]
+	  ("work", "/home/joe/doc/work", []),
+	  ("agenda", "/home/joe/todos", ["*.swp"])]
 
     #server parameters
 	server = "192.168.0.33"
