@@ -1,6 +1,14 @@
 # RSyncCStation Version 2
 ## Introduction
 Built to sync folders. This script is basically a wrapper around RSync in order to allow for quick syncing of common files. Sort of a replacement for dropbox or similar.
+## Where did the name come from?
+This program started out as a shell script to replace a copy of Synology CloudStation back in 2015. This was because at the time, CloudStation did not support manually triggering a sync operation. This was causing real downtime since it was being used to sync a laptop and a desktop between classes.
+
+So, rscs was born. One raspberry pi with SSH, a copy of RSync, and a little scripting later, and a single folder could be incrementally synced rather quickly from the command line. This was really just to avoid having to type the rsync command over and over again.
+
+This version was born out of the need to speed this process up. Originally, the script synced one directory. All of its contents was synced every time, and this wasn't always neccesarily changing files. Things like dotfiles may not have changed at all, yet they were still being checked, eating up massive amounts of time. Rewriting the whole thing in python to support targets, complete with a few extra features, made a lot of sense. That's what rscs2 is.
+
+/history
 ## Basic Useage
 rscs2 is built to be simple to use from a number of arguments standpoint. Note that the script needs some targets configured first, that is described in the next section.
 
