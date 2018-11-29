@@ -62,24 +62,24 @@ if(argc > 1):
     # And now we just chain through each argument in sequence.
     # -r handles the case when the program needs to hit the default remote
     #    server, rather than the default local server.
-    elif argument == "-r":
+    elif argument == "-r" or argument == "--remote":
       mode += 1
     # -s, -p, -u all take additional data. We just need to set the previous and
     #    move forward to collect the requisite data.
-    elif argument == "-s" or argument == "-p" or argument == "-u":
+    elif argument == "-s" or argument == "-p" or argument == "-u" or argument == "--server" or argument == "--port" or argument == "--username":
       argv_previous = argument
     # -s means we're changing to a different server.
-    elif(argv_previous == "-s"):
+    elif(argv_previous == "-s" or argv_previous == "--server"):
       server = argument
       server_remote = argument
       argv_previous = "";
     # -p means we are specifying a set port
-    elif(argv_previous == "-p"):
+    elif(argv_previous == "-p" or argv_previous == "--port"):
       port = argument
       port_remote = argument
       argv_previous = ""
     # -u means we're specifying the username.
-    elif(argv_previous == "-u"):
+    elif(argv_previous == "-u" or argv_previous == "--username"):
       username = argument
       argv_previous = "";
     # -h/--help is just a help message.

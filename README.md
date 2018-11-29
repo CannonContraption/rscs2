@@ -1,26 +1,69 @@
 # RSyncCStation Version 2
 ## Introduction
 Built to sync folders. This script is basically a wrapper around RSync in order to allow for quick syncing of common files. Sort of a replacement for dropbox or similar.
-## New in version 2
-The script uses tuples to define directory and label structures, and allows for syncing specific folders at a time, each with their own specific exclude patterns. There's also the option to sync all the folders at once, starting at the first in the tuple list all the way to the last in order. Also allows for username specification in the command line and a looser, less strict argument ordering structure.
-## New as of August 2018
-(commmitted in Sep.)
+## Basic Useage
+rscs2 is built to be simple to use from a number of arguments standpoint. Note that the script needs some targets configured first, that is described in the next section.
 
-rscs2 now allows for multiple targets to be specified inline for one command. For instance:
+In order to run the program, use the following pattern:
 
-    rscs dotfiles work keepass
+    rscs2 [options] [targets]
 
-would sync the dotfiles work and keepass targets without syncing everything. This means less instances of the command running wild.
-## From the comments in the file...
-RSyncCStation Version 2!
+replace [options] with any options in this section you want to use. Replace [targets] with any targets that you want to sync to
 
-Rationale:
-the original rscs was quite robust, and was fairly easy to modify. That said, being written in BASH it carried over the limitations of BASH, and thus would only really allow for one directory to sync per instance of the file.
+All of the available options are described below. You may intersperse targets and options as much as you like, since the parse code does not care what order they are put.
 
-So how does it work?
+### -r // --remote
+Use the remote server rather than the local one. rscs2 includes sections for bot a default local and default remote server.
 
-To use rscs2, simply put directories in the array below. You'll note each element in the array is a tuple, with three elements. Two are strings, one is an array. The first string is the target. This should be a simple pneumonic you can type quickly and remember easily. It's the folder identifier for that path. The second argument is the path (should be a full path for compatibility and stability sake). The third argument is an array of directory-specific excluded patterns. See below for examples."""
+### -s (server) // --server (server)
+Specify a server. This allows for temporary use of a system other than the defaults.
+
+### -p (port) // --port (port)
+Specify a port. Useful when SSH isn't on port 22 and 22 is the default, or similar situations.
+
+### -u (username) // --username (username)
+Specify a username. Useful when this doesn't match on the default and for this machine.
+
+### --upload
+Only upload incremental file changes, do not download them.
+
+### --download
+Only download incremental file changes, do not upload them.
+
+## Specifying Targets
+This is a simple affair, for the most part. rscs2 is written in python, and the program itself contains all of the configuration settings needed in order to operate. They are all well-labelled at the top of the file.
+
+As an example, here's a simple starter target list:
 
     syncdirs = [
-      ("rscs1", "/home/joe/SyncMe", []),
-      ("lmms", "/home/joe/lmms", ["*.ogg", "*.wav", "*.mp3"])]; # Excludes exported audio
+		  ("rscs1", "/home/joe/SyncMe", []),
+		    ("lmms", "/home/joe/lmms", ["*.ogg", "*.wav", "*.mp3"])]; # Excludes exported audio
+
+To add more targets, add a comma before the last ] and open a tuple.
+
+Targets use this syntax:
+
+    ("targetname", "/path/to/target", ["*.excluded", "*.file", "*patterns", "*.list"])
+
+where targetname is a single word, the path to the target is a valid path on the client and server computer, and the excluded file patterns are regex expressions for files to exclude from sync operations.
+
+# Example
+## Command
+rscs2 -r dotfiles school work
+
+## Program Configuration
+
+	syncdirs = [
+	  ("dotfiles", "/home/joe/doc/dotfiles", []),
+	  ("school", "/home/joe/doc/school", ["*.class", "*.o", "*.out"]), #Excludes compiled source
+	  ("work", "/home/joe/doc/work", [])]
+
+    #server parameters
+	server = "192.168.0.33"
+	port = "22"
+	server_remote = "wykkid.awesome.dnsna.me"
+	port_remote = "2000"
+	username = "joe"
+
+## Description
+This invokes rscs2 and tells it to use its default remote server. From there, it tries to sync the dotfiles, school, and work targets as specified in the header of the program.
