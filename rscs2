@@ -33,82 +33,141 @@ username = "joe"
 
 #general parameters
 excludes_file = "~/.rsexcludes.regex"
+send_receive_only = 6;
 
-#and now to program code. This is the section that should (more or less) be a black box.
+"""
+Argument parsing
+
+The argument parser iterates through every argument. If it finds something that
+corresponds to a built-in argument, it acts according to that set of
+instructions. Otherwise, it just behaves as if the user passed it a target.
+"""
 argc = len(sys.argv)
 mode = 0
 target = []
 if(argc > 1):
   argv_previous = ""
+  # used to determine whether we got the command name yet.
+  # We don't need this while parsing arguments, and changing the script name
+  # should not cause any problems.
   passed_first_argument = False;
   for argument in sys.argv:
     if(passed_first_argument == False):
       passed_first_argument = True;
       continue
+    elif argument == "--upload":
+      send_receive_only=4
+    elif argument == "--download":
+      send_receive_only=2
+    # And now we just chain through each argument in sequence.
+    # -r handles the case when the program needs to hit the default remote
+    #    server, rather than the default local server.
     elif argument == "-r":
       mode += 1
+    # -s, -p, -u all take additional data. We just need to set the previous and
+    #    move forward to collect the requisite data.
     elif argument == "-s" or argument == "-p" or argument == "-u":
       argv_previous = argument
+    # -s means we're changing to a different server.
     elif(argv_previous == "-s"):
       server = argument
       server_remote = argument
+      argv_previous = "";
+    # -p means we are specifying a set port
     elif(argv_previous == "-p"):
       port = argument
       port_remote = argument
+      argv_previous = ""
+    # -u means we're specifying the username.
     elif(argv_previous == "-u"):
       username = argument
+      argv_previous = "";
+    # -h/--help is just a help message.
     elif(argument == "-h" or argument == "--help"):
-      print("rscs [options] [target]")
-      print("Syncs a bunch of directories, or a single directory as determined by <target>.")
+      print("rscs [options] [target] [more options] [more targets]")
+      print("Syncs a bunch of directories, or a single target directory..")
       print()
       print("Options: ")
-      print("     Remote server/port mode\r-r")
-      print("     Server is next argument (so -s host.or.ip)\r-s")
-      print("     Port is next argument (so -p 22 or similar)\r-p")
-      print("     Username is next argument (so -u joe or similar\r-u")
+      print("     -r           Use the remote address rather than local")
+      print("     -s <server>  Specify server address")
+      print("     -p <port>    Specify server port")
+      print("     -u <user>    Specify username")
+      print("     --upload     Only upload, do not download anything")
+      print("     --download   Only download, do not upload anything")
       print()
       print("Targets: (default is all)")
       for ptuple in syncdirs:
         print(ptuple[0])
       sys.exit(0)
+    # This is the case where no argument specifies the type of data we're
+    # getting, so the only remaining option is a target.
     else:
       target.append(argument);
+# Mode 1: Remote server mode.
 if(mode == 1):
   server = server_remote;
   port = port_remote;
 
+# In this case, the user didn't specify a target of any kind. We therefore
+# assume that they want to sync everything in the program's reach.
 if(target == []):
     target = ["all"];
 
-command = "rsync"
-command_arguments = "-avucr --info=progress2"
+# And here we start assembling components to build a shell command.
+# This is what actually performs the sync operation.
+command            = "rsync"
+command_arguments  = "-avucr --info=progress2"
 command_arguments += " --exclude-from " + excludes_file
 command_arguments += " -e \"ssh -p " + port + " -l " + username + "\""
 
+# This is the template for server formatting.
 remote_template = "\"" + username + "@" + server + ":"
+
+# And from here we iterate through every target in the list.
 for path in syncdirs:
+  # If that target is queued for sync...
   if(path[0] in target or "all" in target):
+    # We notify the user that's the target we're handling now.
     print("\033[0;33m"+path[0]+"\033[m");
+    # At that point we start preparing a final set of paths to use.
+    # This is because specifying the source and destination directory without a
+    # tailing '/' will cause folders to duplicate inside of themselves. So if
+    # the sync target were /home/etc, pulling that down would create
+    # /home/etc/etc with the contents of /home/etc rather than pulling down
+    # changed files.
+    #
+    # We also start handling excludes properly.
     excludes = ""
     source_path = path[1];
     dest_path = ""
     splitpath = path[1].split("/");
     splitpath.pop(len(splitpath)-1);
+    # Each target can have target-specific exclude patterns. We need this in the
+    # correct syntax so that rsync will obey these rules.
     for excluded_pattern in path[2]:
       excludes += " --exclude \"" + excluded_pattern + "\"";
     for step in splitpath:
       dest_path += step + "/";
-      source_formatted = remote_template + source_path + "\"";
-      dest_formatted = dest_path;
-      sendcommand = command + " " + command_arguments + excludes + " " + source_formatted + " " + dest_formatted
-      #print(sendcommand);
-    if(os.system(sendcommand) != 0):
-      print("An error occurred in the rsync command.")
-      break;
+    # We have a couple templates above for specifying the source and destination
+    # syntax in rsync, including the server and port information. We then apply
+    # this to the paths we have in order to tell rsync where to actually send
+    # and receive information.
+    source_formatted = remote_template + source_path + "\"";
+    dest_formatted = dest_path;
+    # and then we use this composed path in order to compose an rsync command.
+    sendcommand = command + " " + command_arguments + excludes + " " + source_formatted + " " + dest_formatted
+    # Then check if we are receiving this time, and check for errors if so.
+    if(send_receive_only == 2 or send_receive_only == 6):
+      if(os.system(sendcommand) != 0):
+        print("An error occurred in the rsync command.")
+        break;
+    # Then we do the same formatting on the send end, and compose a command for
+    # that.
     source_formatted = source_path;
     dest_formatted = remote_template + dest_path + "\"";
     receivecommand = command + " " + command_arguments + excludes + " " + source_formatted + " " + dest_formatted;
-    #print(receivecommand);
-    if(os.system(receivecommand) != 0):
-      print("An error occurred in the rsync command.")
-      break;
+    # Once again, check if we're supposed to send, do so only in that case.
+    if send_receive_only == 4 or send_receive_only == 6:
+      if(os.system(receivecommand) != 0):
+        print("An error occurred in the rsync command.")
+        break;
